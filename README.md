@@ -326,10 +326,12 @@ $ aws s3 ls --recursive s3://<yourBucketHere>/
 ```
 
 
-Build VRT file using gdalbuildvrt utility
+## Build VRT file using [gdalbuildvrt](http://www.gdal.org/gdalbuildvrt.html) utility
+
+or [gdaltindex](http://www.gdal.org/gdaltindex.html)
 
 
-Use the VRT in QGIS.
+## Use the VRT in QGIS.
 
 
 
