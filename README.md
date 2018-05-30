@@ -1,19 +1,19 @@
 
 
-#Building Cloud Optimized GeoTIFFs without Servers
+# Building Cloud Optimized GeoTIFFs without Servers
 
 In this workshop we will:
-Learn how to build Cloud Optimized GeoTIFFs.
-Build VRT file using gdalbuildvrt utility
-Use the VRT in QGIS.
+* Learn how to build Cloud Optimized GeoTIFFs.
+* Build VRT file using gdalbuildvrt utility
+* Use the VRT in QGIS.
 
 Prerequisites
-Create an IAM Role for EC2 and attach policy
-Start EC2 instance with IAM role and SSH to it.
-Create and S3 bucket and upload data to it.
+* Create an IAM Role for EC2 and attach policy
+* Start EC2 instance with IAM role and SSH to it.
+* Create and S3 bucket and upload data to it.
 
 How does it work?
-﻿GeoTIFF﻿ is a metadata standard that allows ﻿georeferencing﻿ information to be embedded within a ﻿TIFF﻿ image file. Cloud Optimized GeoTIFF, or COG, can be thought of a specific formulation of GeoTIFF that optimizes the in-situ use of GeoTIFF files in an Object Store such as Amazon Simple Storage Service (S3). COGs are useful because they allow systems to work with big geo-data files without having to first transfer typically files to local storage before accessing parts of those files. Being able to use data on S3, in-situ, allows many nodes in a cluster to be pointed at the same loosely coupled authoritative data. And even more importantly, any number of different use cases, such as tile servers, ML apps etc can be pointed at the same shared content.
+**GeoTIFF** is a metadata standard that allows **georeferencing** information to be embedded within a ﻿TIFF﻿ image file. Cloud Optimized GeoTIFF, or COG, can be thought of a specific formulation of GeoTIFF that optimizes the in-situ use of GeoTIFF files in an Object Store such as Amazon Simple Storage Service (S3). COGs are useful because they allow systems to work with big geo-data files without having to first transfer typically files to local storage before accessing parts of those files. Being able to use data on S3, in-situ, allows many nodes in a cluster to be pointed at the same loosely coupled authoritative data. And even more importantly, any number of different use cases, such as tile servers, ML apps etc can be pointed at the same shared content.
 
 You can see documentation on the GDAL trac site done by Even Rouault in late 2016 regarding COG ﻿here﻿. However, you might want to read Chris Holmes write up ﻿here﻿ first, then go back and look at Even's write-up.
 
@@ -146,6 +146,7 @@ arn:aws:iam::23098090808080:role/lambdaUmgeocon
 Create function lambda-gdal_translate-cli
 You will need to copy the script below to a text editor and replace both the IAM Role arn and the S3 bucket name to yours.
 
+```bash
 aws lambda create-function --region us-east-1 \
 --function-name lambda-gdal_translate-cli \
 --description 'Runs gdal_translate on invocation from AWS CLI' \
@@ -165,12 +166,14 @@ aws lambda create-function --region us-east-1 \
       smallTiffArgs='-b 1 -b 2 -b 3 -co tiled=yes -co BLOCKXSIZE=512 -co BLOCKYSIZE=512 -co NUM_THREADS=ALL_CPUS -co COMPRESS=DEFLATE -co PREDICTOR=2'}" \
 --handler index.handler \
 --runtime nodejs6.10 
+```
+
 
 Create function lambda-gdaladdo-evnt
 
 Copy the script below to a text editor and replace both the IAM Role arn and the S3 bucket name to yours.
 
-
+```bash
 aws lambda create-function --region us-east-1 \
     --function-name lambda-gdaladdo-evnt \
     --description 'Runs gdaladdo to create .ovr file on tif creation event' \
@@ -183,10 +186,12 @@ aws lambda create-function --region us-east-1 \
       gdaladdoArgs='-r average -ro'}" \
     --handler index.handler \
     --runtime nodejs6.10 
-
+```
   
 Create function lambda-gdal_translate-evnt
 you will need to copy this to a text editor and replace both the IAM Role arn and the S3 bucket name to yours.
+
+```bash
 aws lambda create-function --region us-east-1 \
     --function-name lambda-gdal_translate-evnt \
     --description 'Runs gdal_translate on event from S3' \
@@ -201,6 +206,8 @@ aws lambda create-function --region us-east-1 \
           replace01= 'cloud-optimize/final'}" \
     --handler index.handler \
     --runtime nodejs6.10 \
+		
+		```
 
 Add tests events to Lambda functions.
 Goto Lambda Console
@@ -212,10 +219,12 @@ Find lambda-gdal_translate-cli
 Hit the drop-down by the “Test” button and click “Configure Test Event”.
 Add this json text. 
 
+```javascript
 {
 "sourceBucket": "aws-naip",
 "sourceKey": "ct/2014/1m/rgbir/41072/m_4107243_nw_18_1_20140721.tif"
 } 
+``` 
 
 Give the test json the name smalltiff.
 Click Test Button to run the test event.
