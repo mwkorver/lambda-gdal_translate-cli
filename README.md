@@ -23,14 +23,18 @@ Adding overviews to GeoTIFFs and rebuilding them with internal tiles and jpeg co
 
 This  workshop will show you how to run the ﻿gdal_translate﻿, ﻿gdaladdo﻿ utilities using the ﻿AWS Lambda﻿ execution environment. It follows the general technique for running arbitrary executables as outlined by Tim Wagner in the AWS Compute Blog ﻿here﻿. You will learn  how to run a distributed batch operation, a single line of which might look like this were it to run from the desktop command line.
 
+```bash
 gdal_translate -b 1 -b 2 -b 3 -of GTiff -outsize 50% 50% -co tiled=yes -co BLOCKXSIZE=512 -co BLOCKYSIZE=512' -co PHOTOMETRIC=YCBCR -co COMPRESS=JPEG -co JPEG_QUALITY='85' input.tif output.tif
+```
 
 We will do the same, but using ﻿AWS Lambda﻿, in a server-less way, without the limitations imposed by the desktop environment. 
 The good news is that the AWS Lamba version of the above invocation of gdal_translate is is actually simpler, because the specifics of the transform, the gdal command line arguments, are kept as Lambda environment variables, rather than used on CLI.
 
 A single command on Lambda looks like the following:
 
+```bash
 aws lambda invoke --function-name lambda-gdal_translate --region us-east-1 --invocation-type Event --payload '{"sourceBucket": "aws-naip", "sourceKey": "wi/2015/1m/rgbir/47090/m_4709061_sw_15_1_20150914.tif"}' log
+``` 
 
 Note how we are only passing the source geotiff location as a JSON string.
 
@@ -105,22 +109,31 @@ From the command line, create a working bucket in the Virginia region.
 $ aws s3 mb s3://<yourBucketHere> --region us-east-1
 
 Make sure it works, upload something small to your new S3 bucket. 
+```bash
 $ aws s3 cp myTestfFile s3://<yourBucketHere>/myTestFile
-
+```
 then test with
+```bash
 $ aws s3 ls s3://<yourBucketHere>/
+```
 
 Lets go look at our source data. We are going work with smallest state in the NAIP collection which is Rhode Island.
 Run. 
+```bash
 $ aws s3 ls --request-payer requester --recursive s3://aws-naip
+```
+
 Ok, there is a lot of data in this bucket.
 Hit ctrl-c to stop it
 
 Narrow it down to just Rhode Island 2014 source RGBIR iles.
+```bash
 $ aws s3 ls --request-payer requester --recursive s3://aws-naip/ri/2014 | grep rgbir/
-
+```
 Write keynames to a list.
+```bash
 $ sudo aws s3 ls --request-payer requester --recursive s3://aws-naip/ri/2014 | grep rgbir | awk -F" " '{print $4}' > mylist
+```
 
 Check your list
 $ cat mylist
@@ -129,6 +142,7 @@ Creating AWS Lambda functions
 
 Here is a skeleton of the CLI command we are going to use to create a Lambda Function using our sample code.
 
+```bash
 aws lambda create-function --region us-east-1
     --function-name yourFunctionName
     --description 'Your Lambda Function' 
@@ -138,12 +152,13 @@ aws lambda create-function --region us-east-1
     --environment Variables="{LD_LIBRARY_PATH=/usr/bin/test/lib64}"
     --handler index.handler
     --runtime nodejs6.10
+```
                
 Note: The “—role” part of the command. In order to use Lambda with S3, you will need an Identity Access Management (IAM) Role with permissions that allow your Lambda function to read/write to Amazon S3.
 This is where you use the IAM Role arn created earlier that looks like this.
 arn:aws:iam::23098090808080:role/lambdaUmgeocon
 
-Create function lambda-gdal_translate-cli
+## Create function lambda-gdal_translate-cli
 You will need to copy the script below to a text editor and replace both the IAM Role arn and the S3 bucket name to yours.
 
 ```bash
@@ -169,7 +184,7 @@ aws lambda create-function --region us-east-1 \
 ```
 
 
-Create function lambda-gdaladdo-evnt
+## Create function lambda-gdaladdo-evnt
 
 Copy the script below to a text editor and replace both the IAM Role arn and the S3 bucket name to yours.
 
@@ -188,7 +203,7 @@ aws lambda create-function --region us-east-1 \
     --runtime nodejs6.10 
 ```
   
-Create function lambda-gdal_translate-evnt
+## Create function lambda-gdal_translate-evnt
 you will need to copy this to a text editor and replace both the IAM Role arn and the S3 bucket name to yours.
 
 ```bash
@@ -207,9 +222,9 @@ aws lambda create-function --region us-east-1 \
     --handler index.handler \
     --runtime nodejs6.10 \
 		
-		```
+```
 
-Add tests events to Lambda functions.
+## Add tests events to Lambda functions.
 Goto Lambda Console
 ﻿https://console.aws.amazon.com/lambda/home?region=us-east-1#/functions﻿
 
@@ -237,7 +252,9 @@ Command to run: AWS_REQUEST_PAYER=requester GDAL_DISABLE_READDIR_ON_OPEN=YES CPL
 
 Go to your EC2 SSH session and list your working bucket.
 
+```bash
 $ aws s3 ls --recursive s3://<yourBucketHere>/
+```
 
 if all went well you should have just one tif file that looks like this.
 
@@ -268,7 +285,9 @@ And run the same test again.
 
 Then back to your EC2 SSH session list your working  bucket.
 
+```bash
 $ aws s3 ls --recursive s3://<yourBucketHere>/
+```
 
 This time output should look like this.
 2018-05-23 08:19:00 96271284 cloud-optimize/deflate/ct/2014/100cm/rgb/41072/m_4107243_nw_18_1_20140721.tif
@@ -279,25 +298,32 @@ The last file under final/  prefix is your completed COG file.
 
 
 Now let's do a US State worth of data.
+```bash
 $cat mylist
+```
 
 Using the list, this is how you run lambda multiple times while feeding source geotiff locations.
 
 Run this and look at the —payload is json of 2 keypairs, Bucket and key name.
+```bash
 $ cat mylist | grep 2012/ | awk -F"/" '{print "lambda invoke --function-name lambda-gdal_translate-cli --region us-east-1 --invocation-type Event --payload \x27{\"sourceBucket\":\"aws-naip\",\"sourceKey\":\""$0"\"}\x27 log" }' 
+```
 
 Running the above one-by-one would be time consuming for a long list. This is how you run the list, but in parallel.
 
 The -P arg controls the # of threads.
 
+```bash
  $ cat mylist | grep 2012/ | awk -F"/" '{print "lambda invoke --function-name lambda-gdal_translate-cli --region us-east-1 --invocation-type Event --payload \x27{\"sourceBucket\":\"aws-naip\",\"sourceKey\":\""$0"\"}\x27 log" }' | xargs -n11 -P64 aws
+ ```
 
 Once you run the above command, after a few moments, you should see many HTTP 202s returned. That means that Lambda is running your gdal jobs in asynchronous or non-blocking mode because you used  --invocation-type Event in your Lambda invocation.
 
 Check to see progress of COG generation by listing your bucket.
 
+```bash
 $ aws s3 ls --recursive s3://<yourBucketHere>/
-
+```
 
 
 Build VRT file using gdalbuildvrt utility
