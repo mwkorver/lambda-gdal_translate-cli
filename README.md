@@ -348,23 +348,12 @@ This time you should see many more files under
 
 or [gdaltindex](http://www.gdal.org/gdaltindex.html)
 
+To be added..
+
 
 ## Use the VRT in QGIS.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+## How to add either shapefile raster index to .map file for use in Mapserver/GDAL.
 
 
 Sample user-data file for EC2
