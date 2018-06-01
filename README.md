@@ -273,7 +273,7 @@ Goto lambda-gdaladdo-evnt Function.
 On the left, under 'Designer' scroll down to find S3 and click it. 
 You should get a prompt configure the S3 trigger and area in the GUI call 'Configure Triggers”.
 Use these settings:
-* Bucket: <yourBucketHere>
+* Bucket: [yourBucketHere]
 * Event type: ObjectCreated
 * Prefix: cloud-optimize/deflate/
 * Filter pattern: tif
@@ -284,7 +284,7 @@ https://console.aws.amazon.com/lambda/home?region=us-east-1#/functions/lambda-gd
 On the left, under 'Designer' scroll down to find S3 and click it. 
 You should get a prompt configure the S3 trigger and area in the GUI call 'Configure Triggers”.
 Use these settings:
-* Bucket: <yourBucketHere>
+* Bucket: [yourBucketHere]
 * Event type: ObjectCreated
 * Prefix: cloud-optimize/deflate/
 * Filter pattern: ovr
