@@ -265,10 +265,10 @@ if all went well you should have just one tif file that looks like this.
 
 cloud-optimize/deflate/ct/2014/100cm/rgb/41072/m_4107243_nw_18_1_20140721.tif
 
-Now lets add eventing to your S3 bucket to wire-up the other 2 lambda functions.
+Now lets add eventing to your S3 bucket to wire-up the other 2 lambda functions, lambda-gdaladdo-evnt and lambda-gdal_translate-envt, so that they run in a cascaded fashion after the first one.
 
 Goto lambda-gdaladdo-evnt Function.
-﻿https://console.aws.amazon.com/lambda/home?region=us-east-1#/functions/lambda-gdaladdo-evnt﻿
+https://console.aws.amazon.com/lambda/home?region=us-east-1#/functions/lambda-gdaladdo-evnt
 
 On the left, under 'Designer' scroll down to find S3 and click it. 
 You should get a prompt configure the S3 trigger and area in the GUI call 'Configure Triggers”.
