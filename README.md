@@ -270,23 +270,27 @@ Now lets add eventing to your S3 bucket to wire-up the other 2 lambda functions.
 Goto lambda-gdaladdo-evnt Function.
 ﻿https://console.aws.amazon.com/lambda/home?region=us-east-1#/functions/lambda-gdaladdo-evnt﻿
 
-On the left, under 'Designer' scroll down to find S3 and click it. You should get a prompt configure the S3 trigger and area in the GUI call 'Configure Triggers”.
-Bucket: <yourBucketHere>
-Event type: ObjectCreated
-Prefix: cloud-optimize/deflate/
-Filter pattern: tif
+On the left, under 'Designer' scroll down to find S3 and click it. 
+You should get a prompt configure the S3 trigger and area in the GUI call 'Configure Triggers”.
+Use these settings:
+* Bucket: <yourBucketHere>
+* Event type: ObjectCreated
+* Prefix: cloud-optimize/deflate/
+* Filter pattern: tif
 
 Similarly for the 3rd and final step, lambda-gdal_translate-evnt function.
-﻿https://console.aws.amazon.com/lambda/home?region=us-east-1#/functions/lambda-gdal_translate-evnt﻿
+https://console.aws.amazon.com/lambda/home?region=us-east-1#/functions/lambda-gdal_translate-evnt
 
-On the left, under 'Designer' scroll down to find S3 and click it. You should get a prompt configure the S3 trigger and area in the GUI call 'Configure Triggers”.
-Bucket: <yourBucketHere>
-Event type: ObjectCreated
-Prefix: cloud-optimize/deflate/
-Filter pattern: ovr
+On the left, under 'Designer' scroll down to find S3 and click it. 
+You should get a prompt configure the S3 trigger and area in the GUI call 'Configure Triggers”.
+Use these settings:
+* Bucket: <yourBucketHere>
+* Event type: ObjectCreated
+* Prefix: cloud-optimize/deflate/
+* Filter pattern: ovr
 	
 Now once again go back to lambda-gdal_translate-cli function
-﻿https://console.aws.amazon.com/lambda/home?region=us-east-1#/functions/lambda-gdal_translate-cli﻿
+https://console.aws.amazon.com/lambda/home?region=us-east-1#/functions/lambda-gdal_translate-cli
 And run the smaltiff test again.
 
 Then back to your EC2 SSH session list your working  bucket.
