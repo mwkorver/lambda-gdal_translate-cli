@@ -299,10 +299,14 @@ Then back to your EC2 SSH session list your working  bucket.
 $ aws s3 ls --recursive s3://<yourBucketHere>/
 ```
 
-This time output should look like this.
+This time ls output should look like this.
+
+```bash
 2018-05-23 08:19:00 96271284 cloud-optimize/deflate/ct/2014/100cm/rgb/41072/m_4107243_nw_18_1_20140721.tif
 2018-05-23 08:19:16 47455892 cloud-optimize/deflate/ct/2014/100cm/rgb/41072/m_4107243_nw_18_1_20140721.tif.ovr
 2018-05-23 08:19:25 12527265 cloud-optimize/final/ct/2014/100cm/rgb/41072/m_4107243_nw_18_1_20140721.tif
+
+```
 
 The last file under final/  prefix is your completed COG file.
 
@@ -365,40 +369,7 @@ or [gdaltindex](http://www.gdal.org/gdaltindex.html)
 
 Sample user-data file for EC2
 
-#cloud-boothook
-#!/bin/bash
-set -x
-
-exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
-# fix for "unable to resolve host" error even when dns hostnames/resolution are turned on for VPC
-
-echo "127.0.0.1 $(hostname)" >> /etc/hosts
-
-# grab shapefiles from public bucket
-aws s3 sync s3://umgeocon/shpfl /home/ec2-user/mapfiles
-# grab map file, this file includes keys
-aws s3 cp s3://umgeocon/mapfiles/test.map /home/ec2-user/mapfiles/test.map
-
-if [ -x "$(command -v docker)" ]
-then
-echo "This is a reboot"
-# grab map and shapefiles
-
-else
-echo "Running first time install scripts."
-yum update -y
-DEBIAN_FRONTEND=noninteractive
-# install docker
-yum install -y docker
-service docker start
-docker run --detach -v /home/ec2-user/mapfiles:/mapfiles:ro --publish 8080:80 --name mapserver geodata/mapserver
-# log file setup in the now running mapserver container
-# the location of the log file is dependent on what you specify in your map file.
-# looks like - CONFIG "MS_ERRORFILE" "/var/log/ms_error.log" in map file
-docker exec mapserver touch /var/log/ms_error.log
-docker exec mapserver chown www-data /var/log/ms_error.log
-docker exec mapserver chmod 644 /var/log/ms_error.log
-fi
+https://gist.github.com/mwkorver/bc493dc2ad3b49c6e5844ec162a6bffd
 
 
 
@@ -406,7 +377,7 @@ test query
 ﻿http://ec2-184-72-85-184.compute-1.amazonaws.com:8080/wms/?map=/mapfiles/test.map&SERVICE=WMS&LAYERS=naip-index-20170815&SRS=epsg:3857&BBOX=-9798309.78182,5438953.18466,-9798004.03371,5439258.93277&STYLES=&VERSION=1.1.1&REQUEST=GetMap&FORMAT=image/jpeg&WIDTH=256&HEIGHT=256﻿
 
 
-$ sudo docker run -v $(pwd):/data geodata/gdal gdalbuildvrt
+
 
 
 
