@@ -117,7 +117,8 @@ then test with
 $ aws s3 ls s3://<yourBucketHere>/
 ```
 
-Lets go look at our source data. We are going work with smallest state in the NAIP collection which is Rhode Island.
+Lets look at our source data. We are going work with smallest state in the NAIP collection which is Rhode Island.
+
 Run. 
 ```bash
 $ aws s3 ls --request-payer requester --recursive s3://aws-naip
@@ -159,7 +160,7 @@ This is where you use the IAM Role arn created earlier that looks like this.
 arn:aws:iam::23098090808080:role/lambdaUmgeocon
 
 ## Create function lambda-gdal_translate-cli
-You will need to copy the script below to a text editor and replace both the IAM Role arn and the S3 bucket name to yours.
+You will need to copy the script below to a text editor and replace both the IAM Role arn and the S3 bucket name to your own.
 
 ```bash
 aws lambda create-function --region us-east-1 \
@@ -185,8 +186,7 @@ aws lambda create-function --region us-east-1 \
 
 
 ## Create function lambda-gdaladdo-evnt
-
-Copy the script below to a text editor and replace both the IAM Role arn and the S3 bucket name to yours.
+Copy the script below to a text editor and replace both the IAM Role arn and the S3 bucket name to your own.
 
 ```bash
 aws lambda create-function --region us-east-1 \
@@ -204,7 +204,7 @@ aws lambda create-function --region us-east-1 \
 ```
   
 ## Create function lambda-gdal_translate-evnt
-you will need to copy this to a text editor and replace both the IAM Role arn and the S3 bucket name to yours.
+Again, you will need to copy this to a text editor and replace both the IAM Role arn and the S3 bucket name to your own.
 
 ```bash
 aws lambda create-function --region us-east-1 \
@@ -224,7 +224,7 @@ aws lambda create-function --region us-east-1 \
 		
 ```
 
-## Add tests events to Lambda functions.
+## Add test events to Lambda functions.
 Goto Lambda Console
 ﻿https://console.aws.amazon.com/lambda/home?region=us-east-1#/functions﻿
 
@@ -244,12 +244,17 @@ Add this json text.
 Give the test json the name smalltiff.
 Click Test Button to run the test event.
 
-Once finished you should see
+Once finished you should see this:
 Execution result: succeeded(﻿logs﻿)
-Click details that should include this string.
+Click on Details
+In the log output section you should see this text:
+
+```bash
 Command to run: AWS_REQUEST_PAYER=requester GDAL_DISABLE_READDIR_ON_OPEN=YES CPL_VSIL_CURL_ALLOWED_EXTENSIONS=.tif ./bin/gdal_translate -b 1 -b 2 -b 3 -co tiled=yes -co BLOCKXSIZE=512 -co BLOCKYSIZE=512 -co NUM_THREADS=ALL_CPUS -co COMPRESS=DEFLATE -co PREDICTOR=2 /vsis3/aws-naip/ct/2014/1m/rgbir/41072/m_4107243_nw_18_1_20140721.tif /tmp/output.tif 
+```
+That is the gdal command that you are running on Lambda. Note the how the input file is the tif file in 3 referrenced using the prefix "/vsis3/".
 
-
+Let's see if we have created any new data in S3. 
 Go to your EC2 SSH session and list your working bucket.
 
 ```bash
@@ -260,7 +265,7 @@ if all went well you should have just one tif file that looks like this.
 
 cloud-optimize/deflate/ct/2014/100cm/rgb/41072/m_4107243_nw_18_1_20140721.tif
 
-Now lets add eventing to your S3 bucket to wire up the other 2 lambda functions.
+Now lets add eventing to your S3 bucket to wire-up the other 2 lambda functions.
 
 Goto lambda-gdaladdo-evnt Function.
 ﻿https://console.aws.amazon.com/lambda/home?region=us-east-1#/functions/lambda-gdaladdo-evnt﻿
@@ -279,9 +284,10 @@ Bucket: <yourBucketHere>
 Event type: ObjectCreated
 Prefix: cloud-optimize/deflate/
 Filter pattern: ovr
+	
 Now once again go back to lambda-gdal_translate-cli function
 ﻿https://console.aws.amazon.com/lambda/home?region=us-east-1#/functions/lambda-gdal_translate-cli﻿
-And run the same test again.
+And run the smaltiff test again.
 
 Then back to your EC2 SSH session list your working  bucket.
 
@@ -296,7 +302,6 @@ This time output should look like this.
 
 The last file under final/  prefix is your completed COG file.
 
-
 Now let's do a US State worth of data.
 ```bash
 $cat mylist
@@ -309,21 +314,26 @@ Run this and look at the —payload is json of 2 keypairs, Bucket and key name.
 $ cat mylist | grep 2012/ | awk -F"/" '{print "lambda invoke --function-name lambda-gdal_translate-cli --region us-east-1 --invocation-type Event --payload \x27{\"sourceBucket\":\"aws-naip\",\"sourceKey\":\""$0"\"}\x27 log" }' 
 ```
 
-Running the above one-by-one would be time consuming for a long list. This is how you run the list, but in parallel.
+Running the above one-by-one would be time consuming for a long list. This is how you run the list in parallel.
 
-The -P arg controls the # of threads.
+The -P arg controls the # of threads. If you are running a small EC2 instance, you might need to reduce -P to a smaller number such as 8 or 16.
 
 ```bash
  $ cat mylist | grep 2012/ | awk -F"/" '{print "lambda invoke --function-name lambda-gdal_translate-cli --region us-east-1 --invocation-type Event --payload \x27{\"sourceBucket\":\"aws-naip\",\"sourceKey\":\""$0"\"}\x27 log" }' | xargs -n11 -P64 aws
  ```
 
-Once you run the above command, after a few moments, you should see many HTTP 202s returned. That means that Lambda is running your gdal jobs in asynchronous or non-blocking mode because you used  --invocation-type Event in your Lambda invocation.
+Once you run the above command, after a few moments, you should see many HTTP 202s returned. That means that Lambda is running your gdal jobs in asynchronous or non-blocking mode because you used  **--invocation-type Event** in your Lambda invocation.
 
 Check to see progress of COG generation by listing your bucket.
 
 ```bash
 $ aws s3 ls --recursive s3://<yourBucketHere>/
 ```
+
+This time you should see many more files under
+
+2018-05-23 08:19:00 96271284 cloud-optimize/deflate/ri...
+
 
 
 ## Build VRT file using [gdalbuildvrt](http://www.gdal.org/gdalbuildvrt.html) utility
