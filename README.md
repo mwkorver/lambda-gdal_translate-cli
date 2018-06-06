@@ -1,5 +1,4 @@
 
-
 # Building Cloud Optimized GeoTIFFs without Servers
 
 In this workshop we will:
@@ -13,15 +12,15 @@ Prerequisites
 * Create and S3 bucket and upload data to it.
 
 How does it work?
-**GeoTIFF** is a metadata standard that allows **georeferencing** information to be embedded within a ﻿TIFF﻿ image file. Cloud Optimized GeoTIFF, or COG, can be thought of a specific formulation of GeoTIFF that optimizes the in-situ use of GeoTIFF files in an Object Store such as Amazon Simple Storage Service (S3). COGs are useful because they allow systems to work with big geo-data files without having to first transfer typically files to local storage before accessing parts of those files. Being able to use data on S3, in-situ, allows many nodes in a cluster to be pointed at the same loosely coupled authoritative data. And even more importantly, any number of different use cases, such as tile servers, ML apps etc can be pointed at the same shared content.
+**GeoTIFF** is a metadata standard that allows **georeferencing** information to be embedded within a TIFF image file. Cloud Optimized GeoTIFF, or COG, can be thought of a specific formulation of GeoTIFF that optimizes the in-situ use of GeoTIFF files in an Object Store such as Amazon Simple Storage Service (S3). COGs are useful because they allow systems to work with big geo-data files without having to first transfer typically files to local storage before accessing parts of those files. Being able to use data on S3, in-situ, allows many nodes in a cluster to be pointed at the same loosely coupled authoritative data. And even more importantly, any number of different use cases, such as tile servers, ML apps etc can be pointed at the same shared content.
 
-You can see documentation on the GDAL trac site done by Even Rouault in late 2016 regarding COG ﻿here﻿. However, you might want to read Chris Holmes write up ﻿here﻿ first, then go back and look at Even's write-up.
+You can see documentation on the GDAL trac site done by Even Rouault in late 2016 regarding COG [here](https://trac.osgeo.org/gdal/wiki/CloudOptimizedGeoTIFF). However, you might want to read Chris Holmes write up [here](https://medium.com/planet-stories/cloud-native-geospatial-part-2-the-cloud-optimized-geotiff-6b3f15c696ed) first, then go back and look at Even's write-up.
 
-The COG “recipe” does it's magic by organizing  the layout of pixels and image overviews in such a way as to optimize HTTP GET range requests. This enables client  applications to request just part of the image (HTTP range-gets),  rather than requesting the whole file from Amazon S3 and copying to the local file system before making it available to GDAL. Why is this important? It's because the server is often requested to build a small area, such as a 256 x 256 tile from a much larger image typically measured in thousands of pixels. The caveat here is that file system in user space (FUSE) based methods, such as used by NASA GIBS, a method that pre-dates COG, that do copy whole objects to local storage, can be more efficient when many requests are made against the same source GeoTIFFs. However, using COG alone is very simple and probably satisfies most use-cases.
+The COG “recipe” does it's magic by organizing  the layout of pixels and image overviews in such a way as to optimize HTTP GET range requests. This enables client  applications to request just part of the image, rather than requesting the whole file from Amazon S3 and copying to the local file system before making it available to GDAL. Why is this important? It's because the server is often requested to build a small area, such as a 256 x 256 tile from a much larger image typically measured in thousands of pixels. The caveat here is that file system in user space (FUSE) based methods, such as used by NASA GIBS, a method that pre-dates COG, that do copy whole objects to local storage, can be more efficient when many requests are made against the same source GeoTIFFs. However, using COG alone is very simple and probably satisfies most use-cases.
 
 Adding overviews to GeoTIFFs and rebuilding them with internal tiles and jpeg compression is an old technique used to improve performance of mosaic'd orthos served from WMS/WMTS servers. In this workshop we will start with 4-Band imagery stored on Amazon S3, and use AWS Lamba to compute the transformation into RGB COG.
 
-This  workshop will show you how to run the ﻿gdal_translate﻿, ﻿gdaladdo﻿ utilities using the ﻿AWS Lambda﻿ execution environment. It follows the general technique for running arbitrary executables as outlined by Tim Wagner in the AWS Compute Blog ﻿here﻿. You will learn  how to run a distributed batch operation, a single line of which might look like this were it to run from the desktop command line.
+This  workshop will show you how to run the [gdal_translate](http://www.gdal.org/gdal_translate.html), [gdaladdo](http://www.gdal.org/gdaladdo.html) utilities using the [AWS Lambda](https://aws.amazon.com/lambda/) execution environment. It follows the general technique for running arbitrary executables as outlined by Tim Wagner in the AWS Compute Blog [here](https://aws.amazon.com/blogs/compute/running-executables-in-aws-lambda/). You will learn  how to run a distributed batch operation, a single line of which might look like this were it to run from the desktop command line.
 
 ```bash
 gdal_translate -b 1 -b 2 -b 3 -of GTiff -outsize 50% 50% -co tiled=yes -co BLOCKXSIZE=512 -co BLOCKYSIZE=512' -co PHOTOMETRIC=YCBCR -co COMPRESS=JPEG -co JPEG_QUALITY='85' input.tif output.tif
@@ -38,31 +37,31 @@ aws lambda invoke --function-name lambda-gdal_translate --region us-east-1 --inv
 
 Note how we are only passing the source geotiff location as a JSON string.
 
-﻿Rather than being limited by the number of cores on your workstation, AWS Lambda﻿ allows you to run your operation on many execution threads.  Lambda makes it easy to access large amounts compute, but serverless compute is only part of  the architecture. This script works in conjunction with ﻿Amazon Simple Storage Service﻿ (S3), rather than a traditional file system or block storage such as EBS or EFS. Both compute and storage is serverless. 
+Rather than being limited by the number of cores on your workstation, AWS Lambda allows you to run your operation on many execution threads.  While Lambda makes it easy to access large amounts compute, serverless compute is only part of the architecture. This script works in conjunction with [Amazon Simple Storage Service](https://aws.amazon.com/s3) (S3), to not just store the data, but use [S3 event notifications](https://docs.aws.amazon.com/AmazonS3/latest/dev/NotificationHowTo.html) to build COG files in a fully serverless way.
 
-The specific methods described in this blog were used to transform the CONUS collection of USDA NAIP data in the aws-naip, and ESRI curated naip-visualization S3 buckets into COG format. USDA NAIP is a part of the AWS Earth on AWS collection  that you can find described ﻿here﻿.
+The specific methods described in this blog were used to transform the CONUS collection of USDA NAIP data in the aws-naip, and ESRI curated naip-visualization S3 buckets into COG format. USDA NAIP is a part of the AWS Earth on AWS collection  that you can find described [here](https://registry.opendata.aws/usda-naip/).
 
-We will be using 3 Lambda functions that are based on ﻿﻿mwkorver﻿/lambda-gdal_translate.﻿
+We will be using 3 Lambda functions that are based on mwkorver/lambda-gdal_translate.
 
 lambda-gdal_translate-cli
 lambda-gdaladdo-evnt
 lambda-gdal_translate-evnt.
 
-Note: If you compile your own GDAL binaries, ensure that they’re either statically linked or built for the matching version of Amazon Linux. However, for this workshop binaries are provided.
+Note: If you compile your own GDAL binaries, ensure that they’re either statically linked or built for the matching version of Amazon Linux. However, for this workshop GDAL binaries are provided.
 
-Create 2 IAM Roles
+## Create 2 IAM Roles
 First a little housekeeping. We will need 2 AWS Identity and Access Management (IAM) Roles. IAM is a web service that helps you securely control access to AWS resources. You use IAM to control who is authenticated (signed in) and authorized (has permissions) to use resources. 
 We will need one Role to run AWS Lambda, and one for use with EC2 to invoke Lambda and use S3.
 
-Lambda Role creation
+### Lambda Role creation
 Login to the AWS Management Console and confirm that you are in the Virginia Region (N.Virginia)
 
 Goto IAM console.
-﻿https://console.aws.amazon.com/iam/﻿
+https://console.aws.amazon.com/iam/
 On the Menu on the left
 Click Roles
 Click Create Role Button
-﻿https://console.aws.amazon.com/iam/home?region=us-east-1#/roles$new?step=type﻿
+https://console.aws.amazon.com/iam/home?region=us-east-1#/roles$new?step=type
 “AWS Service” should be selected, if not select it then select Lambda.
 
 Under Choose the service that will use this role
@@ -79,15 +78,15 @@ lambdaUmgeocon
 When it says your new Role has been created click on the Role name to go to properties of that role and  keep that tab open You will need the Role arn that looks something like this.
 arn:aws:iam::23098090808080:role/lambdaUmgeocon
 
-EC2 Role creation
+### EC2 Role creation
 For use on EC2 we need a role that allows access to Lambda and S3. An administrative role or power-user role will work, but here is how you create a role that is more specific to what we need today.
 
 Goto IAM console.
-﻿https://console.aws.amazon.com/iam/﻿
+https://console.aws.amazon.com/iam/
 On the Menu on the left
 Click Roles
 Click Create Role Button
-﻿https://console.aws.amazon.com/iam/home?region=us-east-1#/roles$new?step=type﻿
+https://console.aws.amazon.com/iam/home?region=us-east-1#/roles$new?step=type
 “AWS Service” should be selected, if not select it.
 
 Under Choose the service that will use this role 
@@ -106,7 +105,9 @@ This workshop assumes familiarity with EC2, but if that is not the case, see ﻿
 The easiest way to do this is to run Amazon Linux instance configured with an ﻿IAM Role﻿ that can read/write to S3. You can alternatively just run this part locally, but generally speaking, it makes more sense to be closer to your data, on a VM in the same AWS region as the data you are working with. The idea is to go to the data, not the other way around.
 
 From the command line, create a working bucket in the Virginia region.
-$ aws s3 mb s3://<yourBucketHere> --region us-east-1
+```bash
+$ aws s3 mb s3://[yourBucketHere] --region us-east-1
+```
 
 Make sure it works, upload something small to your new S3 bucket. 
 ```bash
@@ -226,10 +227,10 @@ aws lambda create-function --region us-east-1 \
 
 ## Add test events to Lambda functions.
 Goto Lambda Console
-﻿https://console.aws.amazon.com/lambda/home?region=us-east-1#/functions﻿
+https://console.aws.amazon.com/lambda/home?region=us-east-1#/functions
 
 Find lambda-gdal_translate-cli
-﻿https://console.aws.amazon.com/lambda/home?region=us-east-1#/functions/lambda-gdal_translate-cli﻿
+https://console.aws.amazon.com/lambda/home?region=us-east-1#/functions/lambda-gdal_translate-cli
 
 Hit the drop-down by the “Test” button and click “Configure Test Event”.
 Add this json text. 
@@ -341,7 +342,6 @@ $ aws s3 ls --recursive s3://<yourBucketHere>/
 This time you should see many more files under
 
 2018-05-23 08:19:00 96271284 cloud-optimize/deflate/ri...
-
 
 
 ## Build VRT file using [gdalbuildvrt](http://www.gdal.org/gdalbuildvrt.html) utility
