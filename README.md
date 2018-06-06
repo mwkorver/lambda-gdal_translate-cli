@@ -338,19 +338,44 @@ Once you run the above command, after a few moments, you should see many HTTP 20
 Check to see progress of COG generation by listing your bucket.  
 
 ```bash
-$ aws s3 ls --recursive s3://<yourBucketHere>/
+$ aws s3 ls --recursive s3://<yourBucketHere>/cloud-optimize/final/ri/
 ```
 
 This time you should see many more files under
 
-2018-05-23 08:19:00 96271284 cloud-optimize/deflate/ri...
+```bash
+2018-06-05 19:13:57   14955325 cloud-optimize/final/ri/2012/100cm/rgb/41071/m_4107152_nw_19_1_20120721.tif
+2018-06-05 19:15:23   14701517 cloud-optimize/final/ri/2012/100cm/rgb/41071/m_4107152_se_19_1_20120721.tif
+2018-06-05 19:16:21   13828620 cloud-optimize/final/ri/2012/100cm/rgb/41071/m_4107152_sw_19_1_20120721.tif
+2018-06-05 19:13:51   15400194 cloud-optimize/final/ri/2012/100cm/rgb/42071/m_4207158_se_19_1_20120721.tif
+2018-06-05 19:16:37   12865171 cloud-optimize/final/ri/2012/100cm/rgb/42071/m_4207159_se_19_1_20120721.tif
+2018-06-05 19:13:51   15373525 cloud-optimize/final/ri/2012/100cm/rgb/42071/m_4207159_sw_19_1_20120721.tif
+...
+```
 
 
 ## Build VRT file using [gdalbuildvrt](http://www.gdal.org/gdalbuildvrt.html) utility
 
+Start by creating a list of references to geotiffs in S3 that look like this
+
+/vsis3/korver.us.east.1/cloud-optimize/final/ri/2012/100cm/rgb/42071/m_4207159_se_19_1_20120721.tif
+The /vsis3/ part signal to [GDAL's virtual file system] (http://www.gdal.org/gdal_virtual_file_systems.html#gdal_virtual_file_systems_drivers) that supports network access to Amazon S3.
+
 or [gdaltindex](http://www.gdal.org/gdaltindex.html)
 
-To be added..
+list your new COG files.
+```bash
+$ aws s3 ls --recursive s3://korver.us.east.1/cloud-optimize/final/ri/ | awk -F" " '{print $4}'
+```
+
+Prepend /vsis3/ and output as a file.
+```bash
+$ aws s3 ls --recursive s3://korver.us.east.1/cloud-optimize/final/ri/ | awk -F" " '{print "/vsis3/korver.us.east.1/" $4}' > riCog
+```
+
+```bash
+$ aws s3 ls --recursive s3://<yourBucketHere>/cloud-optimize/final/ri/ | awk -F" " '{print $4}'
+```
 
 
 ## Use the VRT in QGIS.
