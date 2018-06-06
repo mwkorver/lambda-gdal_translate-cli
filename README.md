@@ -363,7 +363,8 @@ https://gist.github.com/mwkorver/bc493dc2ad3b49c6e5844ec162a6bffd
 
 
 test query
-﻿http://ec2-184-72-85-184.compute-1.amazonaws.com:8080/wms/?map=/mapfiles/test.map&SERVICE=WMS&LAYERS=naip-index-20170815&SRS=epsg:3857&BBOX=-9798309.78182,5438953.18466,-9798004.03371,5439258.93277&STYLES=&VERSION=1.1.1&REQUEST=GetMap&FORMAT=image/jpeg&WIDTH=256&HEIGHT=256﻿
+http://52.205.213.174:8080/wms/?map=/mapfiles/test.map&SERVICE=WMS&LAYERS=naip-index-20170815&SRS=epsg:3857&BBOX=-9798309.78182,5438953.18466,-9798004.03371,5439258.93277&STYLES=&VERSION=1.1.1&REQUEST=GetMap&FORMAT=image/jpeg&WIDTH=256&HEIGHT=256
+
 
 
 
